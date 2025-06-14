@@ -1,24 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>progress-path-workouts</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Path Workouts</title>
+    <meta name="description" content="Bodyweight Strength Foundation Workout Tracker" />
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.462.0/lucide.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <h1 class="header-title">Progress Path Workouts</h1>
+            <p class="header-subtitle">Bodyweight Strength Foundation</p>
+        </header>
 
-    <meta property="og:title" content="progress-path-workouts" />
-    <meta property="og:description" content="Lovable Generated Project" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+        <nav class="navigation" id="navigation">
+            <button class="nav-btn active" data-view="dashboard">
+                <i data-lucide="home"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="nav-btn" data-view="logger">
+                <i data-lucide="calendar"></i>
+                <span>Log Workout</span>
+            </button>
+            <button class="nav-btn" data-view="stats">
+                <i data-lucide="trending-up"></i>
+                <span>Statistics</span>
+            </button>
+            <button class="nav-btn" data-view="progressions">
+                <i data-lucide="settings"></i>
+                <span>Progressions</span>
+            </button>
+        </nav>
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-  </head>
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view active">
+                <div class="view-header">
+                    <div>
+                        <h2 class="view-title">Your Training Progress</h2>
+                        <p class="view-subtitle" id="last-workout-text">Ready to start your first workout?</p>
+                    </div>
+                    <button class="btn btn-primary" id="start-workout-btn">
+                        <i data-lucide="play"></i>
+                        Start Workout
+                    </button>
+                </div>
+                <div class="progressions-grid" id="progressions-grid">
+                    <!-- Progressions will be populated here -->
+                </div>
+            </div>
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+            <!-- Logger View -->
+            <div id="logger-view" class="view">
+                <div class="view-header">
+                    <h2 class="view-title">Log Workout</h2>
+                    <p class="view-subtitle">Track your exercise performance</p>
+                </div>
+                
+                <div class="workout-logger">
+                    <div class="progression-selector">
+                        <label for="progression-select">Select Progression:</label>
+                        <select id="progression-select" class="select">
+                            <option value="">Choose a progression...</option>
+                        </select>
+                    </div>
+
+                    <div id="exercise-form" class="exercise-form hidden">
+                        <div class="exercise-info">
+                            <h3 id="exercise-name">Exercise Name</h3>
+                            <p id="exercise-description">Exercise description</p>
+                            <p id="exercise-target">Target: 3 sets × 10 reps</p>
+                        </div>
+
+                        <div class="sets-input">
+                            <label for="sets-count">Number of Sets:</label>
+                            <input type="number" id="sets-count" min="1" max="10" value="3" class="input">
+                        </div>
+
+                        <div id="reps-inputs" class="reps-inputs">
+                            <!-- Rep inputs will be generated dynamically -->
+                        </div>
+
+                        <button id="log-workout-btn" class="btn btn-primary">Log Workout</button>
+                    </div>
+
+                    <div id="recent-workouts" class="recent-workouts">
+                        <h3>Recent Workouts</h3>
+                        <div id="recent-workouts-list">
+                            <!-- Recent workouts will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats View -->
+            <div id="stats-view" class="view">
+                <div class="view-header">
+                    <h2 class="view-title">Workout Statistics</h2>
+                    <p class="view-subtitle">Track your progress and achievements</p>
+                </div>
+                
+                <div class="stats-grid" id="stats-grid">
+                    <!-- Stats cards will be populated here -->
+                </div>
+
+                <div class="progression-stats" id="progression-stats">
+                    <!-- Progression statistics will be populated here -->
+                </div>
+            </div>
+
+            <!-- Progressions View -->
+            <div id="progressions-view" class="view">
+                <div class="view-header">
+                    <h2 class="view-title">Manage Progressions</h2>
+                    <p class="view-subtitle">View all exercises in each progression</p>
+                </div>
+                
+                <div id="progressions-list" class="progressions-list">
+                    <!-- Progressions management will be populated here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Toast notification -->
+        <div id="toast" class="toast hidden">
+            <div class="toast-content">
+                <span id="toast-message"></span>
+                <button id="toast-close" class="toast-close">&times;</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
 </html>
