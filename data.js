@@ -535,11 +535,35 @@ const defaultProgressions = [
 ];
 
 // Data management functions
-function saveProgressions() {
+async function saveProgressions() {
     localStorage.setItem(PROGRESSIONS_KEY, JSON.stringify(progressions));
+    
+    // Also save to GitHub if configured
+    if (window.githubStorage && window.githubStorage.isConfigured()) {
+        try {
+            await window.githubStorage.saveFile('progressions.json', progressions);
+        } catch (error) {
+            console.error('Failed to save progressions to GitHub:', error);
+        }
+    }
 }
 
-function loadProgressions() {
+async function loadProgressions() {
+    // Try to load from GitHub first
+    if (window.githubStorage && window.githubStorage.isConfigured()) {
+        try {
+            const githubData = await window.githubStorage.loadFile('progressions.json');
+            if (githubData) {
+                progressions = githubData;
+                localStorage.setItem(PROGRESSIONS_KEY, JSON.stringify(progressions));
+                return;
+            }
+        } catch (error) {
+            console.error('Failed to load progressions from GitHub:', error);
+        }
+    }
+    
+    // Fallback to localStorage
     const saved = localStorage.getItem(PROGRESSIONS_KEY);
     if (saved) {
         try {
@@ -553,11 +577,35 @@ function loadProgressions() {
     }
 }
 
-function saveWorkoutLogs() {
+async function saveWorkoutLogs() {
     localStorage.setItem(WORKOUT_LOGS_KEY, JSON.stringify(workoutLogs));
+    
+    // Also save to GitHub if configured
+    if (window.githubStorage && window.githubStorage.isConfigured()) {
+        try {
+            await window.githubStorage.saveFile('workout-logs.json', workoutLogs);
+        } catch (error) {
+            console.error('Failed to save workout logs to GitHub:', error);
+        }
+    }
 }
 
-function loadWorkoutLogs() {
+async function loadWorkoutLogs() {
+    // Try to load from GitHub first
+    if (window.githubStorage && window.githubStorage.isConfigured()) {
+        try {
+            const githubData = await window.githubStorage.loadFile('workout-logs.json');
+            if (githubData) {
+                workoutLogs = githubData;
+                localStorage.setItem(WORKOUT_LOGS_KEY, JSON.stringify(workoutLogs));
+                return;
+            }
+        } catch (error) {
+            console.error('Failed to load workout logs from GitHub:', error);
+        }
+    }
+    
+    // Fallback to localStorage
     const saved = localStorage.getItem(WORKOUT_LOGS_KEY);
     if (saved) {
         try {
@@ -574,3 +622,19 @@ function loadWorkoutLogs() {
 // Initialize data
 let progressions = [...defaultProgressions];
 let workoutLogs = [];
+
+// Initialize GitHub storage when available
+async function initializeData() {
+    await loadProgressions();
+    await loadWorkoutLogs();
+}
+
+// Load GitHub storage module
+async function loadGitHubStorage() {
+    try {
+        const module = await import('./src/lib/githubStorage.js');
+        window.githubStorage = module.githubStorage;
+    } catch (error) {
+        console.log('GitHub storage not available, using localStorage only');
+    }
+}

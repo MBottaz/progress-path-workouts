@@ -890,19 +890,99 @@ function initializeModals() {
 }
 
 // Initialize the application
-function initializeApp() {
-    // Load data from localStorage
-    loadProgressions();
-    loadWorkoutLogs();
+async function initializeApp() {
+    // Load GitHub storage first
+    await loadGitHubStorage();
+    
+    // Check if GitHub is configured, if not show config screen
+    if (window.githubStorage && !window.githubStorage.isConfigured()) {
+        showGitHubConfig();
+        return;
+    }
+    
+    // Load data from GitHub/localStorage
+    await initializeData();
     
     // Update workoutData from loaded data
     workoutData.progressions = progressions;
     workoutData.entries = workoutLogs;
     
+    renderApp();
+}
+
+function renderApp() {
     initializeNavigation();
     initializeModals();
     renderDashboard(); // Start with dashboard view
     initializeIcons();
+}
+
+function showGitHubConfig() {
+    const app = document.getElementById('app');
+    app.innerHTML = `
+        <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; background: var(--background);">
+            <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem;">
+                <h2 style="color: var(--foreground); margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 600;">Configure GitHub Storage</h2>
+                <p style="color: var(--muted-foreground); margin: 0 0 1.5rem 0; font-size: 0.875rem;">Set up GitHub as your database to sync workout data across devices</p>
+                
+                <form id="github-config-form" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div>
+                        <label style="color: var(--foreground); font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.5rem;">GitHub Personal Access Token</label>
+                        <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; background: var(--background); color: var(--foreground);" />
+                        <p style="color: var(--muted-foreground); font-size: 0.75rem; margin-top: 0.25rem;">Create a token at GitHub Settings → Developer settings → Personal access tokens</p>
+                    </div>
+                    
+                    <div>
+                        <label style="color: var(--foreground); font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.5rem;">Repository Owner</label>
+                        <input type="text" id="github-owner" placeholder="your-username" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; background: var(--background); color: var(--foreground);" />
+                    </div>
+                    
+                    <div>
+                        <label style="color: var(--foreground); font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.5rem;">Repository Name</label>
+                        <input type="text" id="github-repo" placeholder="workout-tracker-data" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; background: var(--background); color: var(--foreground);" />
+                    </div>
+                    
+                    <div id="github-error" style="display: none; padding: 0.75rem; background: var(--destructive); color: var(--destructive-foreground); border-radius: 4px; font-size: 0.875rem;"></div>
+                    
+                    <button type="submit" style="width: 100%; padding: 0.75rem; background: var(--primary); color: var(--primary-foreground); border: none; border-radius: 4px; font-weight: 500; cursor: pointer;">Configure GitHub Storage</button>
+                </form>
+                
+                <div style="margin-top: 1.5rem; font-size: 0.875rem; color: var(--muted-foreground);">
+                    <p style="font-weight: 600; margin: 0 0 0.5rem 0;">Setup Instructions:</p>
+                    <ol style="margin: 0; padding-left: 1.25rem;">
+                        <li>Create a GitHub repository for storing workout data</li>
+                        <li>Generate a Personal Access Token with 'repo' permissions</li>
+                        <li>Enter your details above to sync data across devices</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('github-config-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const token = document.getElementById('github-token').value;
+        const owner = document.getElementById('github-owner').value;
+        const repo = document.getElementById('github-repo').value;
+        const errorDiv = document.getElementById('github-error');
+        
+        if (!token || !owner || !repo) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'All fields are required';
+            return;
+        }
+        
+        try {
+            localStorage.setItem('github_token', token);
+            localStorage.setItem('github_owner', owner);
+            localStorage.setItem('github_repo', repo);
+            window.location.reload();
+        } catch (err) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = 'Failed to configure GitHub storage';
+        }
+    });
 }
 
 // Start the app when the page loads
