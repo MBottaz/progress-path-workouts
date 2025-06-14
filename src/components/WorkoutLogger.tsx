@@ -23,6 +23,7 @@ export const WorkoutLogger = ({ workoutData, onLogEntry, onComplete }: WorkoutLo
   const [selectedProgression, setSelectedProgression] = useState<string>('');
   const [sets, setSets] = useState<SetData[]>([{ reps: 0 }]);
   const [notes, setNotes] = useState('');
+  const [currentWorkoutId] = useState<string>(() => Date.now().toString());
   const { toast } = useToast();
 
   const selectedProgressionData = workoutData.progressions.find(p => p.id === selectedProgression);
@@ -64,6 +65,7 @@ export const WorkoutLogger = ({ workoutData, onLogEntry, onComplete }: WorkoutLo
 
     const entry: Omit<WorkoutEntry, 'id'> = {
       date: new Date().toISOString(),
+      workoutId: currentWorkoutId,
       progressionId: selectedProgression,
       exerciseId: currentExercise.id,
       sets: validSets.length,
@@ -89,8 +91,7 @@ export const WorkoutLogger = ({ workoutData, onLogEntry, onComplete }: WorkoutLo
       });
     }
 
-    // Reset form
-    setSelectedProgression('');
+    // Keep progression selected, reset only sets and notes
     setSets([{ reps: 0 }]);
     setNotes('');
   };
@@ -158,7 +159,50 @@ export const WorkoutLogger = ({ workoutData, onLogEntry, onComplete }: WorkoutLo
 
         {/* Workout Logging */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Log Sets & Reps</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Log Sets & Reps</h3>
+            {selectedProgression && (
+              <div className="text-sm text-muted-foreground">
+                Workout ID: {currentWorkoutId.slice(-6)}
+              </div>
+            )}
+          </div>
+          
+          {/* Workout History for Selected Progression */}
+          {selectedProgression && (
+            <Card className="mb-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Recent History</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {workoutData.entries
+                  .filter(entry => entry.progressionId === selectedProgression)
+                  .slice(-3)
+                  .reverse()
+                  .map((entry, index) => {
+                    const exercise = selectedProgressionData?.exercises.find(ex => ex.id === entry.exerciseId);
+                    return (
+                      <div key={entry.id} className="flex items-center justify-between p-2 bg-muted/30 rounded text-sm">
+                        <div>
+                          <span className="font-medium">{exercise?.name}</span>
+                          <span className="text-muted-foreground ml-2">
+                            {entry.sets} sets × {entry.reps.join(', ')} reps
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(entry.date).toLocaleDateString()}
+                        </div>
+                      </div>
+                    );
+                  })}
+                {workoutData.entries.filter(entry => entry.progressionId === selectedProgression).length === 0 && (
+                  <div className="text-sm text-muted-foreground text-center py-2">
+                    No previous workouts for this progression
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           
           {selectedProgressionData && currentExercise ? (
             <Card>

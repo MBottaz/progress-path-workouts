@@ -18,6 +18,7 @@ export interface Progression {
 export interface WorkoutEntry {
   id: string;
   date: string;
+  workoutId: string;
   progressionId: string;
   exerciseId: string;
   sets: number;
