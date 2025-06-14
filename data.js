@@ -1,3 +1,7 @@
+// Storage keys
+const PROGRESSIONS_KEY = 'workout_progressions';
+const WORKOUT_LOGS_KEY = 'workout_logs';
+
 // BWSF Progressions Data
 const defaultProgressions = [
   {
@@ -530,5 +534,43 @@ const defaultProgressions = [
   }
 ];
 
-// Storage key for local storage
-const STORAGE_KEY = 'workout-progression-data';
+// Data management functions
+function saveProgressions() {
+    localStorage.setItem(PROGRESSIONS_KEY, JSON.stringify(progressions));
+}
+
+function loadProgressions() {
+    const saved = localStorage.getItem(PROGRESSIONS_KEY);
+    if (saved) {
+        try {
+            progressions = JSON.parse(saved);
+        } catch (error) {
+            console.error('Failed to load progressions:', error);
+            progressions = [...defaultProgressions];
+        }
+    } else {
+        progressions = [...defaultProgressions];
+    }
+}
+
+function saveWorkoutLogs() {
+    localStorage.setItem(WORKOUT_LOGS_KEY, JSON.stringify(workoutLogs));
+}
+
+function loadWorkoutLogs() {
+    const saved = localStorage.getItem(WORKOUT_LOGS_KEY);
+    if (saved) {
+        try {
+            workoutLogs = JSON.parse(saved);
+        } catch (error) {
+            console.error('Failed to load workout logs:', error);
+            workoutLogs = [];
+        }
+    } else {
+        workoutLogs = [];
+    }
+}
+
+// Initialize data
+let progressions = [...defaultProgressions];
+let workoutLogs = [];

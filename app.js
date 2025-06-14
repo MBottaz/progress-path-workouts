@@ -1,25 +1,8 @@
-// Global state
+// Global state - initialize from data.js
 let workoutData = {
-    progressions: defaultProgressions,
-    entries: []
+    progressions: progressions,
+    entries: workoutLogs
 };
-
-// Load data from localStorage on startup
-function loadData() {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    if (savedData) {
-        try {
-            workoutData = JSON.parse(savedData);
-        } catch (error) {
-            console.error('Failed to parse saved workout data:', error);
-        }
-    }
-}
-
-// Save data to localStorage
-function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(workoutData));
-}
 
 // Initialize Lucide icons
 function initializeIcons() {
@@ -236,46 +219,81 @@ function renderLogger() {
         repsInputs.innerHTML = '';
         
         for (let i = 1; i <= setsCount; i++) {
-            const repInput = document.createElement('div');
-            repInput.className = 'rep-input';
-            repInput.innerHTML = `
-                <label>Set ${i}:</label>
-                <input type="number" min="0" value="${targetReps}" class="input" data-set="${i}">
-                <span>reps</span>
+            const setDiv = document.createElement('div');
+            setDiv.className = 'set-input';
+            setDiv.innerHTML = `
+                <div class="set-header">
+                    <label>Set ${i}</label>
+                </div>
+                <div class="set-fields">
+                    <div class="field-group">
+                        <label>Reps:</label>
+                        <input type="number" id="set-${i}-reps" min="0" value="${targetReps}" class="input" placeholder="Reps">
+                    </div>
+                    <div class="field-group">
+                        <label>Weight (optional):</label>
+                        <input type="number" id="set-${i}-weight" min="0" step="0.5" class="input" placeholder="kg/lbs">
+                    </div>
+                </div>
             `;
-            repsInputs.appendChild(repInput);
+            repsInputs.appendChild(setDiv);
         }
     }
     
     function logWorkout(progression, exercise) {
         const setsCount = parseInt(document.getElementById('sets-count').value);
-        const repInputs = document.querySelectorAll('#reps-inputs input');
-        const reps = Array.from(repInputs).map(input => parseInt(input.value) || 0);
+        const reps = [];
+        const weights = [];
+        let hasValidReps = false;
+        
+        for (let i = 1; i <= setsCount; i++) {
+            const repsInput = document.getElementById(`set-${i}-reps`);
+            const weightInput = document.getElementById(`set-${i}-weight`);
+            const repsValue = parseInt(repsInput.value) || 0;
+            const weightValue = parseFloat(weightInput.value) || null;
+            
+            reps.push(repsValue);
+            weights.push(weightValue);
+            if (repsValue > 0) hasValidReps = true;
+        }
+        
+        if (!hasValidReps) {
+            showToast('Please enter at least one set with reps');
+            return;
+        }
         
         const entry = {
             id: Date.now().toString(),
             progressionId: progression.id,
             exerciseId: exercise.id,
+            exerciseName: exercise.name,
             date: new Date().toISOString(),
             sets: setsCount,
-            reps: reps
+            reps: reps,
+            weights: weights.some(w => w !== null) ? weights : null
         };
         
         workoutData.entries.push(entry);
+        workoutLogs.push(entry);
         workoutData.lastWorkoutDate = new Date().toISOString();
+        
+        // Save data
+        saveWorkoutLogs();
         
         // Check if progression criteria is met
         if (checkProgressionCriteria(entry, exercise)) {
             const newLevel = Math.min(progression.currentLevel + 1, progression.exercises.length - 1);
             const progressionIndex = workoutData.progressions.findIndex(p => p.id === progression.id);
             workoutData.progressions[progressionIndex].currentLevel = newLevel;
+            progressions[progressionIndex].currentLevel = newLevel;
+            
+            saveProgressions();
             
             if (newLevel > progression.currentLevel) {
                 showToast(`Congratulations! Advanced to Level ${newLevel + 1}: ${progression.exercises[newLevel].name}`);
             }
         }
         
-        saveData();
         showToast('Workout logged successfully!');
         renderRecentWorkouts();
         
@@ -304,14 +322,18 @@ function renderLogger() {
             const exercise = progression?.exercises.find(e => e.id === entry.exerciseId);
             const date = new Date(entry.date);
             
+            const weightInfo = entry.weights && entry.weights.some(w => w !== null) 
+                ? ` | Weights: ${entry.weights.map(w => w ? w + 'kg' : '-').join(', ')}`
+                : '';
+            
             return `
                 <div class="workout-entry">
                     <div class="workout-entry-info">
                         <div class="flex items-center gap-2 mb-1">
-                            <h4>${exercise?.name || 'Unknown Exercise'}</h4>
+                            <h4>${exercise?.name || entry.exerciseName || 'Unknown Exercise'}</h4>
                             ${progression ? `<span class="badge ${getCategoryBadgeClass(progression.category)}">${progression.category}</span>` : ''}
                         </div>
-                        <p>${entry.sets} sets × ${entry.reps.join(', ')} reps</p>
+                        <p>${entry.sets} sets × ${entry.reps.join(', ')} reps${weightInfo}</p>
                     </div>
                     <div class="workout-entry-date">
                         <p>${date.toLocaleDateString()}</p>
@@ -591,7 +613,8 @@ function resetProgression(progressionId, progressionName) {
     if (confirm(`Are you sure you want to reset "${progressionName}" to level 1?`)) {
         const progressionIndex = workoutData.progressions.findIndex(p => p.id === progressionId);
         workoutData.progressions[progressionIndex].currentLevel = 0;
-        saveData();
+        progressions[progressionIndex].currentLevel = 0;
+        saveProgressions();
         showToast(`${progressionName} has been reset to level 1.`);
         renderProgressions();
     }
@@ -748,14 +771,17 @@ function saveProgression() {
         
         if (currentEditingProgression) {
             const index = workoutData.progressions.findIndex(p => p.id === currentEditingProgression.id);
+            const progressionIndex = progressions.findIndex(p => p.id === currentEditingProgression.id);
             workoutData.progressions[index] = progression;
+            progressions[progressionIndex] = progression;
             showToast('Progression updated successfully');
         } else {
             workoutData.progressions.push(progression);
+            progressions.push(progression);
             showToast('Progression created successfully');
         }
         
-        saveData();
+        saveProgressions();
         closeProgressionEditor();
         renderView(document.querySelector('.nav-btn.active').dataset.view);
     } catch (error) {
@@ -767,7 +793,11 @@ function deleteProgression(progressionId, progressionName) {
     if (confirm(`Are you sure you want to delete "${progressionName}"? This will also delete all related workout entries.`)) {
         workoutData.progressions = workoutData.progressions.filter(p => p.id !== progressionId);
         workoutData.entries = workoutData.entries.filter(e => e.progressionId !== progressionId);
-        saveData();
+        progressions = progressions.filter(p => p.id !== progressionId);
+        workoutLogs = workoutLogs.filter(e => e.progressionId !== progressionId);
+        
+        saveProgressions();
+        saveWorkoutLogs();
         showToast(`${progressionName} has been deleted.`);
         renderProgressions();
     }
@@ -829,8 +859,10 @@ function closeLevelChanger() {
 function changeLevel(newLevel) {
     if (currentLevelProgression) {
         const progressionIndex = workoutData.progressions.findIndex(p => p.id === currentLevelProgression.id);
+        const progressionIndexData = progressions.findIndex(p => p.id === currentLevelProgression.id);
         workoutData.progressions[progressionIndex].currentLevel = newLevel;
-        saveData();
+        progressions[progressionIndexData].currentLevel = newLevel;
+        saveProgressions();
         showToast(`Now at Level ${newLevel + 1}: ${currentLevelProgression.exercises[newLevel].name}`);
         closeLevelChanger();
         renderView(document.querySelector('.nav-btn.active').dataset.view);
@@ -859,7 +891,14 @@ function initializeModals() {
 
 // Initialize the application
 function initializeApp() {
-    loadData();
+    // Load data from localStorage
+    loadProgressions();
+    loadWorkoutLogs();
+    
+    // Update workoutData from loaded data
+    workoutData.progressions = progressions;
+    workoutData.entries = workoutLogs;
+    
     initializeNavigation();
     initializeModals();
     renderDashboard(); // Start with dashboard view

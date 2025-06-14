@@ -395,20 +395,47 @@ body {
     margin-bottom: 1.5rem;
 }
 
-.rep-input {
+.set-input {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: var(--card);
+}
+
+.set-header {
+    margin-bottom: 8px;
+}
+
+.set-header label {
+    font-weight: 600;
+    color: var(--foreground);
+    font-size: 0.9rem;
+}
+
+.set-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.field-group {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.rep-input label {
-    min-width: 60px;
+.field-group label {
+    font-size: 0.8rem;
     font-weight: 500;
+    color: var(--muted-foreground);
 }
 
-.rep-input input {
-    width: 100px;
+@media (max-width: 640px) {
+    .set-fields {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
 }
 
 .recent-workouts {
