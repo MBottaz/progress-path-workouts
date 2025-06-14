@@ -8,7 +8,16 @@ import { useWorkoutData } from '@/hooks/useWorkoutData';
 
 const Index = () => {
   const [activeView, setActiveView] = useState<'dashboard' | 'logger' | 'progressions' | 'stats'>('dashboard');
-  const { workoutData, addWorkoutEntry, resetProgression, getProgressionStats } = useWorkoutData();
+  const { 
+    workoutData, 
+    addWorkoutEntry, 
+    resetProgression, 
+    changeExerciseLevel,
+    addProgression,
+    updateProgression,
+    deleteProgression,
+    getProgressionStats 
+  } = useWorkoutData();
 
   const renderActiveView = () => {
     switch (activeView) {
@@ -17,7 +26,16 @@ const Index = () => {
       case 'logger':
         return <WorkoutLogger workoutData={workoutData} onLogEntry={addWorkoutEntry} onComplete={() => setActiveView('dashboard')} />;
       case 'progressions':
-        return <ProgressionManager workoutData={workoutData} onResetProgression={resetProgression} />;
+        return (
+          <ProgressionManager 
+            workoutData={workoutData} 
+            onResetProgression={resetProgression}
+            onChangeExerciseLevel={changeExerciseLevel}
+            onAddProgression={addProgression}
+            onUpdateProgression={updateProgression}
+            onDeleteProgression={deleteProgression}
+          />
+        );
       case 'stats':
         return <StatsView workoutData={workoutData} getProgressionStats={getProgressionStats} />;
       default:

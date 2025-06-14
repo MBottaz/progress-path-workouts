@@ -2,16 +2,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { WorkoutData } from '@/types/workout';
-import { RotateCcw, CheckCircle, Lock, Target } from 'lucide-react';
+import { WorkoutData, Progression } from '@/types/workout';
+import { RotateCcw, CheckCircle, Lock, Target, Plus, Edit, Trash2, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ProgressionEditor } from './ProgressionEditor';
+import { ExerciseLevelChanger } from './ExerciseLevelChanger';
 
 interface ProgressionManagerProps {
   workoutData: WorkoutData;
   onResetProgression: (progressionId: string) => void;
+  onChangeExerciseLevel: (progressionId: string, newLevel: number) => void;
+  onAddProgression: (progression: Progression) => void;
+  onUpdateProgression: (progression: Progression) => void;
+  onDeleteProgression: (progressionId: string) => void;
 }
 
-export const ProgressionManager = ({ workoutData, onResetProgression }: ProgressionManagerProps) => {
+export const ProgressionManager = ({ 
+  workoutData, 
+  onResetProgression, 
+  onChangeExerciseLevel,
+  onAddProgression,
+  onUpdateProgression,
+  onDeleteProgression 
+}: ProgressionManagerProps) => {
   const { toast } = useToast();
 
   const handleReset = (progressionId: string, progressionName: string) => {
@@ -20,6 +33,16 @@ export const ProgressionManager = ({ workoutData, onResetProgression }: Progress
       title: "Progression Reset",
       description: `${progressionName} has been reset to level 1.`
     });
+  };
+
+  const handleDelete = (progressionId: string, progressionName: string) => {
+    if (confirm(`Are you sure you want to delete "${progressionName}"? This will also delete all related workout entries.`)) {
+      onDeleteProgression(progressionId);
+      toast({
+        title: "Progression Deleted",
+        description: `${progressionName} has been deleted.`
+      });
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -34,9 +57,20 @@ export const ProgressionManager = ({ workoutData, onResetProgression }: Progress
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Manage Progressions</h2>
-        <p className="text-muted-foreground">View all exercises in each progression and manage your progress</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Manage Progressions</h2>
+          <p className="text-muted-foreground">View all exercises in each progression and manage your progress</p>
+        </div>
+        <ProgressionEditor
+          onSave={onAddProgression}
+          trigger={
+            <Button className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Create New Progression
+            </Button>
+          }
+        />
       </div>
 
       <div className="space-y-6">
@@ -61,15 +95,46 @@ export const ProgressionManager = ({ workoutData, onResetProgression }: Progress
                       </span>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleReset(progression.id, progression.name)}
-                    className="flex items-center gap-2"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Reset
-                  </Button>
+                  <div className="flex gap-2">
+                    <ExerciseLevelChanger
+                      progression={progression}
+                      onLevelChange={onChangeExerciseLevel}
+                      trigger={
+                        <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Settings className="w-4 h-4" />
+                          Change Level
+                        </Button>
+                      }
+                    />
+                    <ProgressionEditor
+                      progression={progression}
+                      onSave={onUpdateProgression}
+                      trigger={
+                        <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </Button>
+                      }
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleReset(progression.id, progression.name)}
+                      className="flex items-center gap-2"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Reset
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(progression.id, progression.name)}
+                      className="flex items-center gap-2 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               

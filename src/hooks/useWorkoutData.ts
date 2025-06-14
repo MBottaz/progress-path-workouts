@@ -74,6 +74,39 @@ export const useWorkoutData = () => {
     }));
   };
 
+  const changeExerciseLevel = (progressionId: string, newLevel: number) => {
+    setWorkoutData(prev => ({
+      ...prev,
+      progressions: prev.progressions.map(p => 
+        p.id === progressionId ? { ...p, currentLevel: newLevel } : p
+      )
+    }));
+  };
+
+  const addProgression = (progression: Progression) => {
+    setWorkoutData(prev => ({
+      ...prev,
+      progressions: [...prev.progressions, progression]
+    }));
+  };
+
+  const updateProgression = (updatedProgression: Progression) => {
+    setWorkoutData(prev => ({
+      ...prev,
+      progressions: prev.progressions.map(p => 
+        p.id === updatedProgression.id ? updatedProgression : p
+      )
+    }));
+  };
+
+  const deleteProgression = (progressionId: string) => {
+    setWorkoutData(prev => ({
+      ...prev,
+      progressions: prev.progressions.filter(p => p.id !== progressionId),
+      entries: prev.entries.filter(e => e.progressionId !== progressionId)
+    }));
+  };
+
   const getProgressionStats = (progressionId: string) => {
     const entries = workoutData.entries.filter(e => e.progressionId === progressionId);
     const progression = workoutData.progressions.find(p => p.id === progressionId);
@@ -93,6 +126,10 @@ export const useWorkoutData = () => {
     workoutData,
     addWorkoutEntry,
     resetProgression,
+    changeExerciseLevel,
+    addProgression,
+    updateProgression,
+    deleteProgression,
     getProgressionStats
   };
 };
