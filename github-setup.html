@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Setup - Progress Path Workouts</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <div class="min-h-screen flex items-center justify-center bg-background p-4">
+            <div class="card max-w-md w-full">
+                <div class="card-header">
+                    <h2 class="card-title">Configure GitHub Storage</h2>
+                    <p style="color: var(--muted-foreground); margin-top: 0.5rem;">
+                        Set up GitHub to sync workout data across devices
+                    </p>
+                </div>
+                <div class="card-content">
+                    <form id="github-form" class="space-y-4">
+                        <div class="form-group">
+                            <label for="token">GitHub Personal Access Token</label>
+                            <input type="password" id="token" class="input" placeholder="ghp_xxxxxxxxxxxx" required>
+                            <p style="font-size: 0.75rem; color: var(--muted-foreground); margin-top: 0.25rem;">
+                                Create a token at GitHub Settings → Developer settings → Personal access tokens
+                            </p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="owner">Repository Owner</label>
+                            <input type="text" id="owner" class="input" placeholder="your-username" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="repo">Repository Name</label>
+                            <input type="text" id="repo" class="input" placeholder="workout-tracker-data" required>
+                        </div>
+
+                        <div id="error-message" class="alert alert-error" style="display: none;">
+                            <span id="error-text"></span>
+                        </div>
+
+                        <div id="success-message" class="alert alert-success" style="display: none;">
+                            <span>GitHub storage configured successfully!</span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-full">
+                            Configure GitHub Storage
+                        </button>
+                    </form>
+
+                    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                        <h3 style="font-weight: 600; margin-bottom: 0.5rem;">Setup Instructions:</h3>
+                        <ol style="font-size: 0.875rem; color: var(--muted-foreground); padding-left: 1.25rem;">
+                            <li>Create a GitHub repository for storing workout data</li>
+                            <li>Generate a Personal Access Token with 'repo' permissions</li>
+                            <li>Enter your details above to sync data across devices</li>
+                        </ol>
+                        
+                        <div style="margin-top: 1rem;">
+                            <a href="index.html" class="btn btn-outline w-full">
+                                Skip GitHub Setup (Use Local Storage Only)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { githubStorage } from './src/lib/githubStorage.js';
+
+        const form = document.getElementById('github-form');
+        const errorDiv = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const successDiv = document.getElementById('success-message');
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorDiv.style.display = 'block';
+            successDiv.style.display = 'none';
+        }
+
+        function showSuccess() {
+            successDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const token = document.getElementById('token').value.trim();
+            const owner = document.getElementById('owner').value.trim();
+            const repo = document.getElementById('repo').value.trim();
+
+            if (!token || !owner || !repo) {
+                showError('All fields are required');
+                return;
+            }
+
+            try {
+                githubStorage.configure(token, owner, repo);
+                
+                // Test the connection by attempting to read a file
+                try {
+                    await githubStorage.loadFile('test.json');
+                } catch (testError) {
+                    // If file doesn't exist, that's fine - connection works
+                    if (!testError.message.includes('404')) {
+                        throw testError;
+                    }
+                }
+                
+                showSuccess();
+                
+                // Redirect to main app after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('GitHub configuration failed:', error);
+                showError('Failed to configure GitHub storage. Please check your credentials.');
+            }
+        });
+
+        // Check if already configured
+        if (githubStorage.isConfigured()) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
