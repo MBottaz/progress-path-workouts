@@ -483,7 +483,17 @@ function getProgressionStats(progressionId) {
 function renderProgressions() {
     const progressionsList = document.getElementById('progressions-list');
     
-    progressionsList.innerHTML = workoutData.progressions.map(progression => {
+    // Add create new progression button
+    const createButton = `
+        <div style="margin-bottom: 2rem; text-align: center;">
+            <button class="btn btn-primary" onclick="openProgressionEditor()">
+                <i data-lucide="plus" style="width: 1rem; height: 1rem;"></i>
+                Create New Progression
+            </button>
+        </div>
+    `;
+    
+    const progressionsHtml = workoutData.progressions.map(progression => {
         const progressPercentage = ((progression.currentLevel + 1) / progression.exercises.length) * 100;
         
         const exercisesHtml = progression.exercises.map((exercise, index) => {
@@ -547,9 +557,21 @@ function renderProgressions() {
                         </div>
                     </div>
                     <div class="progression-actions">
+                        <button class="btn btn-outline" onclick="openLevelChanger(workoutData.progressions.find(p => p.id === '${progression.id}'))">
+                            <i data-lucide="settings" style="width: 1rem; height: 1rem;"></i>
+                            Change Level
+                        </button>
+                        <button class="btn btn-outline" onclick="openProgressionEditor(workoutData.progressions.find(p => p.id === '${progression.id}'))">
+                            <i data-lucide="edit" style="width: 1rem; height: 1rem;"></i>
+                            Edit
+                        </button>
                         <button class="btn btn-outline" onclick="resetProgression('${progression.id}', '${progression.name}')">
                             <i data-lucide="rotate-ccw" style="width: 1rem; height: 1rem;"></i>
                             Reset
+                        </button>
+                        <button class="btn btn-outline" onclick="deleteProgression('${progression.id}', '${progression.name}')" style="color: var(--destructive);">
+                            <i data-lucide="trash-2" style="width: 1rem; height: 1rem;"></i>
+                            Delete
                         </button>
                     </div>
                 </div>
@@ -560,6 +582,7 @@ function renderProgressions() {
         `;
     }).join('');
     
+    progressionsList.innerHTML = createButton + progressionsHtml;
     initializeIcons();
 }
 
@@ -574,10 +597,271 @@ function resetProgression(progressionId, progressionName) {
     }
 }
 
+// Progression Editor Modal Functions
+let currentEditingProgression = null;
+let exerciseCounter = 0;
+
+function openProgressionEditor(progression = null) {
+    currentEditingProgression = progression;
+    const modal = document.getElementById('progression-modal');
+    const title = document.getElementById('progression-modal-title');
+    const form = document.getElementById('progression-form');
+    
+    title.textContent = progression ? 'Edit Progression' : 'Create New Progression';
+    
+    if (progression) {
+        document.getElementById('progression-name').value = progression.name;
+        document.getElementById('progression-category').value = progression.category;
+        populateExercises(progression.exercises);
+    } else {
+        form.reset();
+        document.getElementById('exercises-container').innerHTML = '';
+        exerciseCounter = 0;
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+function closeProgressionEditor() {
+    document.getElementById('progression-modal').classList.add('hidden');
+    currentEditingProgression = null;
+}
+
+function populateExercises(exercises) {
+    const container = document.getElementById('exercises-container');
+    container.innerHTML = '';
+    exerciseCounter = 0;
+    
+    exercises.forEach(exercise => {
+        addExerciseEditor(exercise);
+    });
+}
+
+function addExerciseEditor(exercise = null) {
+    exerciseCounter++;
+    const container = document.getElementById('exercises-container');
+    const exerciseDiv = document.createElement('div');
+    exerciseDiv.className = 'exercise-editor';
+    exerciseDiv.dataset.exerciseId = exerciseCounter;
+    
+    exerciseDiv.innerHTML = `
+        <div class="exercise-editor-header">
+            <h4>Level ${exerciseCounter}</h4>
+            <button type="button" class="btn btn-outline" onclick="removeExercise(${exerciseCounter})">
+                <i data-lucide="trash-2"></i>
+                Remove
+            </button>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>Exercise Name</label>
+                <input type="text" class="input exercise-name" placeholder="e.g., Wall Push-up" value="${exercise?.name || ''}" required>
+            </div>
+            <div class="form-group">
+                <label>Unlock Criteria</label>
+                <input type="text" class="input exercise-criteria" placeholder="e.g., Complete 3 sets of 15 reps" value="${exercise?.unlockCriteria || 'Complete target sets and reps'}">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Description</label>
+            <textarea class="textarea exercise-description" placeholder="Describe how to perform this exercise" required>${exercise?.description || ''}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Target Sets</label>
+                <input type="number" class="input exercise-sets" min="1" value="${exercise?.targetSets || 3}" required>
+            </div>
+            <div class="form-group">
+                <label>Target Reps</label>
+                <input type="number" class="input exercise-reps" min="1" value="${exercise?.targetReps || 10}" required>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(exerciseDiv);
+    initializeIcons();
+}
+
+function removeExercise(exerciseId) {
+    const exerciseElement = document.querySelector(`[data-exercise-id="${exerciseId}"]`);
+    if (exerciseElement) {
+        exerciseElement.remove();
+        updateExerciseNumbers();
+    }
+}
+
+function updateExerciseNumbers() {
+    const exercises = document.querySelectorAll('.exercise-editor');
+    exercises.forEach((exercise, index) => {
+        const header = exercise.querySelector('h4');
+        header.textContent = `Level ${index + 1}`;
+    });
+}
+
+function saveProgression() {
+    const name = document.getElementById('progression-name').value.trim();
+    const category = document.getElementById('progression-category').value;
+    const exerciseElements = document.querySelectorAll('.exercise-editor');
+    
+    if (!name) {
+        showToast('Progression name is required');
+        return;
+    }
+    
+    if (exerciseElements.length === 0) {
+        showToast('At least one exercise is required');
+        return;
+    }
+    
+    const exercises = Array.from(exerciseElements).map((element, index) => {
+        const nameInput = element.querySelector('.exercise-name');
+        const descInput = element.querySelector('.exercise-description');
+        const criteriaInput = element.querySelector('.exercise-criteria');
+        const setsInput = element.querySelector('.exercise-sets');
+        const repsInput = element.querySelector('.exercise-reps');
+        
+        if (!nameInput.value.trim() || !descInput.value.trim()) {
+            throw new Error('All exercises must have a name and description');
+        }
+        
+        return {
+            id: currentEditingProgression?.exercises[index]?.id || `exercise-${Date.now()}-${index}`,
+            name: nameInput.value.trim(),
+            description: descInput.value.trim(),
+            unlockCriteria: criteriaInput.value.trim() || 'Complete target sets and reps',
+            targetSets: parseInt(setsInput.value) || 3,
+            targetReps: parseInt(repsInput.value) || 10
+        };
+    });
+    
+    try {
+        const progression = {
+            id: currentEditingProgression?.id || Date.now().toString(),
+            name: name,
+            category: category,
+            currentLevel: currentEditingProgression?.currentLevel || 0,
+            exercises: exercises
+        };
+        
+        if (currentEditingProgression) {
+            const index = workoutData.progressions.findIndex(p => p.id === currentEditingProgression.id);
+            workoutData.progressions[index] = progression;
+            showToast('Progression updated successfully');
+        } else {
+            workoutData.progressions.push(progression);
+            showToast('Progression created successfully');
+        }
+        
+        saveData();
+        closeProgressionEditor();
+        renderView(document.querySelector('.nav-btn.active').dataset.view);
+    } catch (error) {
+        showToast(error.message);
+    }
+}
+
+function deleteProgression(progressionId, progressionName) {
+    if (confirm(`Are you sure you want to delete "${progressionName}"? This will also delete all related workout entries.`)) {
+        workoutData.progressions = workoutData.progressions.filter(p => p.id !== progressionId);
+        workoutData.entries = workoutData.entries.filter(e => e.progressionId !== progressionId);
+        saveData();
+        showToast(`${progressionName} has been deleted.`);
+        renderProgressions();
+    }
+}
+
+// Level Changer Modal Functions
+let currentLevelProgression = null;
+
+function openLevelChanger(progression) {
+    currentLevelProgression = progression;
+    const modal = document.getElementById('level-modal');
+    const title = document.getElementById('level-modal-title');
+    const selector = document.getElementById('level-selector');
+    
+    title.textContent = `Change Exercise Level - ${progression.name}`;
+    
+    selector.innerHTML = progression.exercises.map((exercise, index) => {
+        const isCurrent = index === progression.currentLevel;
+        const isCompleted = index < progression.currentLevel;
+        
+        let iconHtml = '';
+        if (isCompleted) {
+            iconHtml = '<i data-lucide="check-circle" style="width: 1.25rem; height: 1.25rem; color: #16a34a;"></i>';
+        } else if (isCurrent) {
+            iconHtml = '<i data-lucide="target" style="width: 1.25rem; height: 1.25rem; color: var(--primary);"></i>';
+        } else {
+            iconHtml = '<i data-lucide="lock" style="width: 1.25rem; height: 1.25rem; color: var(--muted-foreground);"></i>';
+        }
+        
+        return `
+            <div class="level-option ${isCurrent ? 'current' : ''}" onclick="changeLevel(${index})">
+                <div class="level-icon">${iconHtml}</div>
+                <div style="flex: 1;">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h4 style="font-weight: 600;">Level ${index + 1}: ${exercise.name}</h4>
+                        ${isCurrent ? '<span class="badge badge-default">Current</span>' : ''}
+                        ${isCompleted ? '<span class="badge badge-secondary">Completed</span>' : ''}
+                    </div>
+                    <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.5rem;">
+                        ${exercise.description}
+                    </p>
+                    <div style="color: var(--primary); font-weight: 500; font-size: 0.875rem;">
+                        Target: ${exercise.targetSets} sets × ${exercise.targetReps} reps
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    modal.classList.remove('hidden');
+    initializeIcons();
+}
+
+function closeLevelChanger() {
+    document.getElementById('level-modal').classList.add('hidden');
+    currentLevelProgression = null;
+}
+
+function changeLevel(newLevel) {
+    if (currentLevelProgression) {
+        const progressionIndex = workoutData.progressions.findIndex(p => p.id === currentLevelProgression.id);
+        workoutData.progressions[progressionIndex].currentLevel = newLevel;
+        saveData();
+        showToast(`Now at Level ${newLevel + 1}: ${currentLevelProgression.exercises[newLevel].name}`);
+        closeLevelChanger();
+        renderView(document.querySelector('.nav-btn.active').dataset.view);
+    }
+}
+
+// Initialize modal event listeners
+function initializeModals() {
+    // Progression editor modal
+    document.getElementById('add-exercise-btn').addEventListener('click', () => addExerciseEditor());
+    document.getElementById('cancel-progression-btn').addEventListener('click', closeProgressionEditor);
+    document.getElementById('save-progression-btn').addEventListener('click', saveProgression);
+    
+    // Level changer modal
+    document.getElementById('cancel-level-btn').addEventListener('click', closeLevelChanger);
+    
+    // Close modals when clicking outside
+    document.getElementById('progression-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeProgressionEditor();
+    });
+    
+    document.getElementById('level-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeLevelChanger();
+    });
+}
+
 // Initialize the application
 function initializeApp() {
     loadData();
     initializeNavigation();
+    initializeModals();
     renderDashboard(); // Start with dashboard view
     initializeIcons();
 }
